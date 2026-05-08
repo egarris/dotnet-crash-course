@@ -30,6 +30,29 @@ That phrasing is precise enough to use as a working test. Look at a candidate bo
 
 The answer to those questions is the design's actual modularity. Most systems claim more modularity than they have. A repository named `OrderRepository` that returns the persistence framework's tracked entity graph hides almost nothing — when the persistence layer changes, the change ripples through every caller. A repository that returns purpose-shaped result objects hides the persistence framework entirely; the change can be absorbed.
 
+```csharp
+// Hides nothing — a thin pass-through, no decision absorbed
+public class OrderRepository(AppDbContext db)
+{
+    public Task<Order?> GetAsync(OrderId id) => db.Orders.FindAsync(id).AsTask();
+    // Callers now depend on Order, the framework's entity type, with all its
+    // schema knowledge and lazy-loading behavior.
+}
+
+// Hides something — a shape decision absorbed at the boundary
+public class OrderRepository(AppDbContext db)
+{
+    public Task<OrderSummary?> GetSummaryAsync(OrderId id)
+        => db.Orders
+            .Where(o => o.Id == id)
+            .Select(o => new OrderSummary(o.Id, o.Customer.Name, o.Total))
+            .FirstOrDefaultAsync();
+    // Callers depend on OrderSummary, a shape this codebase owns.
+}
+```
+
+The two classes have the same name and roughly the same surface area. Only the second one earns the abstraction it advertises.
+
 Two well-worn critiques of the hiding discipline are worth taking seriously. The first is that information hiding can be over-applied. When every decision lives behind a boundary, understanding the system requires crossing every boundary, and indirection grows faster than insight. John Ousterhout's *A Philosophy of Software Design* makes the case that the goal is *deep* modules — abstractions that hide a substantial amount of complexity behind a small interface — and that *shallow* modules, ones whose interface is nearly as large as their contents, can be worse than no abstraction at all. The principle of hiding is right; applying it well is harder than the principle makes it sound.
 
 The second critique is that predicting which decisions will change is unreliable. Engineers consistently misjudge it. Decisions believed to be stable get revised; decisions hidden behind elaborate boundaries turn out to have been static all along. The skill of reading a codebase well enough to concentrate hiding where it pays off is real, but it is also fallible, and the wrong predictions are paid for in the same indirection cost as the right ones. A team that designs as if it has perfect foresight produces over-engineered systems; a team that designs as if foresight is impossible produces under-abstracted ones. The middle path is to make boundary decisions reversible enough that getting them wrong is recoverable, and to revisit them when the codebase reveals the predictions were wrong.
@@ -41,6 +64,26 @@ Once an abstraction is a promise paired with a refusal, the direction of depende
 That sentence is what "depend on abstractions, not concretions" is gesturing at. When a caller depends on an interface, it depends on the smaller, more stable contract; the implementation can change underneath without breaking the caller. When a caller depends on a concrete class, it depends on everything that class does, including the parts that should have been free to change.
 
 The same logic scales up to layers. A domain layer (the part of the codebase that expresses the business problem in business terms) depends on its own abstractions of persistence and external services; the persistence and external service layers depend on the domain by implementing what the domain promised. The dependency arrows point toward whichever party owns the contract. When they point the other way, the design has failed at exactly the question this module asks: it has decided that the higher-level concept is constrained by the lower-level implementation, instead of the other way around.
+
+```
+Wrong direction:                       Right direction:
+
+  ┌────────────────────┐                  ┌────────────────────┐
+  │  Domain            │                  │  Domain            │
+  │  (Order, Money)    │                  │  (Order, Money,    │
+  │                    │                  │   IOrderStore)     │
+  └─────────┬──────────┘                  └─────────▲──────────┘
+            │ imports                               │ implements
+            ▼                                       │
+  ┌────────────────────┐                  ┌─────────┴──────────┐
+  │  Persistence       │                  │  Persistence       │
+  │  (DbContext)       │                  │  (DbContext        │
+  │                    │                  │   implements       │
+  │                    │                  │   IOrderStore)     │
+  └────────────────────┘                  └────────────────────┘
+```
+
+In the left diagram, the domain reaches down into the persistence layer; a change in `DbContext` reaches up into domain code. In the right diagram, the domain owns the contract (`IOrderStore`); persistence implements it. A change in `DbContext` stays inside persistence as long as the contract is honored.
 
 The signal that dependencies are pointing the wrong way is usually concrete. Domain code that imports the database driver. A service interface whose method signatures are shaped around HTTP. A validation rule that knows about the JSON serializer. Each of these is a decision that the abstraction was supposed to hide leaking back into the code that the abstraction was supposed to insulate.
 
@@ -55,6 +98,22 @@ Two older terms organize the same observation from a different angle. Coupling d
 High cohesion means the contents of an abstraction share a job. They change for the same reason. They serve the same caller. They have the same audience. Low cohesion means the abstraction is a junk drawer — its contents are there because they fit nowhere better, not because they belong together. Junk-drawer abstractions are hard to name (because there isn't a single thing to name), hard to test (because their concerns interact unpredictably), and hard to change (because each change affects unrelated callers).
 
 Low coupling means the contract between two abstractions is small, stable, and explicit. High coupling means the boundary leaks — callers depend on more than the contract says, or implementations promise more than the contract allows. High-coupling boundaries break under pressure: when one side changes, the other side has to change with it, even when nothing about the contract was supposed to change.
+
+```
+High cohesion, low coupling:        Low cohesion, high coupling:
+
+  ┌────────────────────┐               ┌──────────────────────────┐
+  │ TaxCalculator      │               │ OrderManager             │
+  │   one job          │               │   five unrelated jobs    │
+  │   one reason       │               │   many reasons to change │
+  │   to change        │               └──┬─────┬─────┬─────┬─────┘
+  └──────────┬─────────┘                  │     │     │     │
+             │ small, stable              ▼     ▼     ▼     ▼
+             ▼ contract                callers from every
+        one well-shaped caller         surface of the system
+```
+
+The two shapes have very different futures. The left one absorbs change locally; the right one transmits it.
 
 The most useful re-reading of the Single Responsibility Principle is in this language. The principle is often quoted as "do one thing," which is wrong in a way that matters: many useful abstractions do several things, all of which serve the same purpose. The better reading, attributable to Robert Martin, is that an abstraction should have one reason to change. That reason is the audience it serves, or the decision it hides, or the job it does. When two unrelated reasons to change live in the same abstraction, the abstraction will eventually be split — usually by an engineer who is trying to make one change without making the other and discovers they cannot.
 
@@ -90,6 +149,27 @@ None of these tools are mandatory. They are vocabulary. The point is that good d
 
 Names carry compressed claims about purpose. A useful abstraction has a name that fits the answer to "what is it for?" without strain. A junk-drawer abstraction has a name that strains — `OrderManager`, `UserHelper`, `DataService`. Names ending in *-Manager*, *-Helper*, *-Util*, or *-Service* are not always wrong, but they correlate strongly with abstractions that have not yet decided what they are. The author has reached for a generic suffix because no specific noun fits.
 
+```csharp
+// Junk drawer: the name lies about what's inside
+public class OrderManager
+{
+    public Order Create(CreateOrderRequest req) { /* ... */ }
+    public void EmailReceipt(OrderId id) { /* ... */ }
+    public decimal CalculateTax(Order order) { /* ... */ }
+    public PdfDocument GenerateInvoice(OrderId id) { /* ... */ }
+    public void ArchiveOldOrders(DateTime before) { /* ... */ }
+}
+
+// After splitting: each class can be named for what it actually does
+public class OrderPlacement      { public Order Create(...); }
+public class ReceiptMailer       { public void EmailReceipt(...); }
+public class TaxCalculator       { public decimal Calculate(...); }
+public class InvoiceRenderer     { public PdfDocument Generate(...); }
+public class OrderArchiver       { public void Archive(...); }
+```
+
+The five methods on `OrderManager` have nothing in common except the word *Order* in the surrounding domain. Each one has a different reason to change, a different set of collaborators, and a different audience. The split is not gratuitous — it is what the name was hiding.
+
 This is one reason naming is sometimes the fastest way to find a design problem. When a class's contents resist a clean name, the contents probably resist a clean abstraction. When a method's behavior cannot be summarized in five words, the method is probably doing two things. The exercise of writing one-line job descriptions for every class in a service often surfaces more design issues per minute than any other refactoring activity.
 
 The corollary cuts both ways. A name that fits cleanly does not guarantee a good abstraction; the abstraction can still be cohesive and well-named while pointing the wrong way in the dependency graph. But a name that does not fit cleanly is reliable evidence that something underneath is wrong.
@@ -105,6 +185,48 @@ Then a database refactor lands. A column changes type. A relationship changes ca
 The problem isn't that the team forgot a layer. The problem is that the layers were named but not load-bearing. Each layer passed the persistence framework's data structures through to the next; nothing was hidden. The repository made no promise about its return shape that wasn't dictated by the database. The service made no promise about its arguments that wasn't dictated by what the repository returned. The dependencies pointed the wrong way: the API's shape was determined by the schema, not the other way around.
 
 The fix wasn't to add more layers. The fix was to make the existing layers do the work their names had been claiming. The repository started returning purpose-shaped result objects, projecting only the fields each caller actually used. The services took inputs in the shape their domain logic needed, not in the shape the database returned. The boundaries became real because they started hiding something. After the next schema change, the rippling stopped at the repository.
+
+In code, the shapes shifted like this:
+
+```csharp
+// Before: persistence shape leaks through every layer
+public abstract class BaseRepository<T> where T : class
+{
+    public virtual T? GetByKey(object key)
+    {
+        // reflection finds the primary key by convention
+        var keyProp = typeof(T).GetProperty("Id")!;
+        // returns the framework's tracked entity, with relationships eagerly loaded
+        return _context.Set<T>()
+            .Include("Customer").Include("OrderLines").Include("Shipments")
+            .FirstOrDefault(/* compare key via reflection */);
+    }
+}
+
+// Domain service hands the tracked entity to a mapper, which hands the
+// mapped object to the controller, which hands it to the wire.
+// Schema change in any included relationship breaks the API contract.
+```
+
+```csharp
+// After: each read is shaped by the caller that needs it
+public sealed record OrderSummary(OrderId Id, string CustomerName, decimal Total);
+
+public sealed class OrderSummaryRepository(AppDbContext db)
+{
+    public Task<OrderSummary?> GetForListingAsync(OrderId id)
+        => db.Orders
+            .Where(o => o.Id == id)
+            .Select(o => new OrderSummary(o.Id, o.Customer.Name, o.Total))
+            .FirstOrDefaultAsync();
+}
+
+// The repository now returns OrderSummary, a shape this codebase owns.
+// Callers depend on OrderSummary; the framework's Order entity is invisible
+// to them. A schema change inside the projection stays inside the repository.
+```
+
+The two snippets carry the lesson the prose just claimed: the layered shape was the same in both versions, but only the second one is doing the work the layering implied.
 
 The fix was not free. Purpose-shaped result objects mean more types to maintain, more projections to keep in sync, and slow divergence over time as different callers' needs drift apart. This is approximately the Read Model pattern from CQRS (Command-Query Responsibility Segregation — a design where the shapes used for reading data are deliberately separated from the shapes used for writing it), and it carries the burden CQRS carries: a codebase with twice as many shapes, asking the team to keep both halves coherent. In return, schema changes stop rippling through the API, persistence concerns stay out of domain code, and the test surface for each layer narrows to the contract that layer actually owns. That trade is usually worth it on long-lived services with multiple clients. It usually isn't on short-lived services with one. The discipline is a balance, not a free win.
 

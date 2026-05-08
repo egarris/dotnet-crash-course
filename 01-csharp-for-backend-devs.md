@@ -7,6 +7,25 @@ Module 2 framed language features as the toolkit for expressing design boundarie
 > **Foundational vocabulary**
 >
 > A few terms recur across the sections below. The *runtime* is the program that loads and executes compiled code (Module 0 covers it). It manages two memory regions referred to constantly here. The *stack* holds the parameters and local variables of the currently-executing chain of method calls; space on the stack is reclaimed automatically when each method returns. The *heap* is a longer-lived region holding objects that need to outlive the method that created them; objects on the heap are reclaimed by the *garbage collector* (GC) when nothing references them anymore. *Allocation* is the act of reserving memory for an object, usually on the heap. *Reference types* — classes, interfaces, arrays, delegates — live on the heap; a variable of a reference type holds a *reference*, a small piece of data identifying where the object lives. *Value types* — the built-in numeric types, `bool`, `enum`, `struct`, `record struct` — hold their data directly, usually on the stack or as fields of a containing object. *Dispatch* is the runtime's process of resolving a method call to the code that actually runs; some calls dispatch directly to a known implementation, while others (virtual methods, interface methods) require the runtime to look up the implementation based on the object's actual type at the call site.
+>
+> A diagram for the stack-and-heap split:
+>
+> ```
+>        STACK                              HEAP
+>  (per active method)             (longer-lived objects)
+>
+>  ┌────────────────────┐         ┌────────────────────┐
+>  │ Main()             │         │ Customer           │
+>  │   int count = 5    │         │   Name = "Alice"   │
+>  │   Customer c ──────┼───┐ ┌──>│   Age  = 42        │
+>  ├────────────────────┤   │ │   └────────────────────┘
+>  │ Process()          │   │ │   ┌────────────────────┐
+>  │   int total = 100  │   └─┼──>│ List<Order>        │
+>  │   List<Order> os ──┼─────┘   │   [Order, Order]   │
+>  └────────────────────┘         └────────────────────┘
+> ```
+>
+> Local `int` variables (`count`, `total`) sit on the stack with their value as bytes. Reference-typed locals (`c`, `os`) sit on the stack too, but they only hold a small piece of data identifying where the object lives; the object itself is on the heap. When `Process()` returns, its stack frame is reclaimed; the heap objects stay alive until the GC notices nothing still points at them.
 
 Each section below takes one feature or feature cluster and treats it the way a senior engineer would read it in a code review: what is the feature, what does it do at the mechanism level, what does it let the design express, and where does it commonly go wrong.
 
@@ -70,7 +89,27 @@ Mutate(box, pt);
 // pt.X is still 0
 ```
 
-The distinction explains the perennial confusion that "C# passes objects by reference." What is passed is the reference, by value.
+What's happening at the parameter boundary, in the stack-and-heap picture from earlier:
+
+```
+After Mutate(box, pt) is called:
+
+       caller's stack frame                         Mutate's stack frame
+  ┌────────────────────────┐                  ┌────────────────────────┐
+  │ box ───────────────┐   │                  │ b ───────────────┐     │
+  │ pt = { X = 0 }     │   │                  │ p = { X = 0 }    │     │
+  └────────────────────┼───┘                  └──────────────────┼─────┘
+                       │                                         │
+                       │                                         │
+                       └─────────────┬───────────────────────────┘
+                                     ↓
+                                 ┌─────────────┐  on the heap
+                                 │ Box         │
+                                 │  Value = 0  │
+                                 └─────────────┘
+```
+
+`box` and `b` are two stack variables holding the same reference, both pointing at the one `Box` on the heap; mutations through `b` are mutations to that single object. `pt` and `p` are two independent stack-resident `Point` structs; `p.X = 99` modifies `Mutate`'s copy and leaves `pt` alone. The distinction explains the perennial confusion that "C# passes objects by reference." What is passed is the reference, by value.
 
 The `ref`, `out`, and `in` modifiers change this. `ref` passes a reference to the caller's variable itself, allowing the method to reassign what the caller's variable points to. `out` is `ref` with a contract: the method must assign the variable before returning. `in` is `ref` with a different contract: the method may not write through the reference, but avoids the copy cost for large value types. None of these are common in everyday backend code, but recognizing them is part of fluent reading.
 
@@ -209,6 +248,26 @@ public async Task<int> GetCountAsync(CancellationToken ct)
 is rewritten by the compiler into a struct with one field per local (`data`, the awaiter for `_api.FetchAsync`, the eventual result), a `MoveNext` method that advances through labeled states, and a `Task<int>` returned to the caller as the handle to the eventual result. The method itself returns a `Task` (or `Task<T>`, or `ValueTask<T>`) — a handle to the eventual completion that callers can await in turn. If the method completes synchronously without ever suspending, the state machine stays on the stack — no heap allocation. If the method actually suspends at an `await`, the struct is boxed onto the heap at the suspension point so it can survive while the awaited operation runs.
 
 When `await` is reached and the awaited operation hasn't completed, the state machine registers a *continuation* — the chunk of work that needs to run after the awaited operation completes — and returns. The thread that was running the method is freed. When the operation completes, the runtime schedules the continuation to run on a thread from the *thread pool*, a managed pool of operating-system threads the runtime reuses across many short tasks rather than starting a fresh thread per task (by default; the synchronization context can change this in some application models). This is what makes async I/O cheap on .NET: a process can have thousands of in-flight async operations without paying for thousands of threads.
+
+Visually, the transition at `await` looks like this:
+
+```
+Before await:                       At await (operation in flight):
+
+      STACK                                    STACK             HEAP
+  ┌────────────────────┐                ┌──────────────────┐  ┌──────────────────┐
+  │ GetCountAsync()    │                │ caller           │  │ state machine    │
+  │   state machine    │                │   has the Task,  │  │   data: ?        │
+  │     data           │       ───>     │   continues with │  │   awaiter        │
+  │     awaiter        │                │   other work or  │  │   state = 1      │
+  │     state = 0      │                │   awaits it      │  └──────────────────┘
+  └────────────────────┘                └──────────────────┘         ↑
+                                                                     │
+                                            continuation registered with the awaiter;
+                                            runs on a thread-pool thread when the operation completes
+```
+
+Before the await, the state machine struct lives on the stack inside `GetCountAsync()`'s frame. At the await, the struct gets boxed onto the heap; the calling thread is freed; the awaited operation runs on its own; when it finishes, the runtime picks a thread-pool thread, restores the locals from the heap-resident state machine, and resumes the method from where it paused.
 
 The cost shows up in two places. Allocations: each async method that actually suspends incurs a heap allocation for the boxed state machine, plus the `Task` object for callers to await. Synchronous completion avoids the boxing, and `Task` returns can be optimized via cached completed tasks; `ValueTask` returns allow further elision when the awaited operation usually completes synchronously. Lifetime: an async operation that outlives its calling scope — fire-and-forget work started without an `await`, or work that captures references whose backing objects get disposed before the continuation runs — produces the recurring lifetime-mismatch failure mode this course names. Module 4 covers async in depth; this section is the mechanism preview.
 
