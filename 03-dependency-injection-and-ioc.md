@@ -346,7 +346,7 @@ The constructor of the wrong version lies — the class depends on the global, b
 
 ## A production failure that lives in the container
 
-A scenario from a real codebase, anonymized. A service registered virtually every domain service and repository as singleton, on the theory that the resulting graph would have lower allocation overhead. The `DbContext`, registered by the EF Core extension method as scoped, was the one exception. To bridge the lifetime gap, the team added an `IServiceScopeFactory` parameter to every repository, created a scope per method call, and resolved the `DbContext` from the scope.
+The failure below has shipped in multiple codebases I've reviewed. A service registered virtually every domain service and repository as singleton, on the theory that the resulting graph would have lower allocation overhead. The `DbContext`, registered by the EF Core extension method as scoped, was the one exception. To bridge the lifetime gap, the team added an `IServiceScopeFactory` parameter to every repository, created a scope per method call, and resolved the `DbContext` from the scope.
 
 For a while, this looked fine. Reads worked. Writes worked. Performance tests didn't reveal anything obviously wrong. Months in, customer-facing bugs started surfacing in patterns the team couldn't reproduce locally. A user would update their profile and see stale data on the next page. Two operations in the same logical request would partially succeed — one persisted, the other lost. Background tasks would seem to run successfully but their results never appeared.
 

@@ -4,39 +4,33 @@
 
 ## Why this exists
 
-AI writes most production code now. That doesn't mean engineering judgment matters less — it means it matters more. The bottleneck is no longer "can someone write the code." The bottleneck is "can someone look at a pull request and decide if it's right." Can someone design the system that the AI then fills in? Can someone reason about what the code will do at one hundred requests per second, at ten thousand, at three in the morning during an incident?
+Software engineering, when it works, is a discipline of judgment. It runs on two kinds of correction. One is *computational* — a test fails, a monitor alerts, telemetry indicates drift, and the system updates. The other is *normative* — an engineer commits to a description of how a system will work, and bears the discrepancy when the system behaves differently. The first is doing more of the visible work as tools improve. The second is what holds the practice together at the points where commitments bind.
 
-Those are different skills than the ones most .NET resources teach.
+Most backend work runs on the first kind of correction, and it should. Implementation, refactoring, routine debugging, scaffolding, large parts of testing — computational feedback handles all of it well, and folding good tools into your throughput is sensible. The second kind of correction shows up at specific moments: architectural decisions where someone has to say *this is what we are building, and this is what I will defend if it fails*; customer-facing contracts where someone has to commit to behavior the customer can hold them to; incident ownership, where someone answers for what failed and what comes next; design reviews, where the design gets put on the table by a person who will be held to it; postmortems, where someone has to make the link between a specific judgment and a specific failure and carry the learning forward.
 
-I looked at what's available. Microsoft Learn is an excellent reference — accurate, comprehensive, dry, and shaped like an API surface. Encyclopedic books like *Pro ASP.NET Core* are 1,300-page feature tours: "here is what this method does." Online video courses are skill-acquisition-shaped — "build your first API," "master Entity Framework." Brilliant blogs (Andrew Lock, Mark Seemann, Milan Jovanović, Nick Chapsas) cover deep topics atomically, but no one has stitched them into a coherent curriculum aimed at the engineer who'll be reviewing code, not writing it.
+These are the load-bearing points. They are a small fraction of the visible throughput, and they carry most of the weight. Routing around them is fast. The cost arrives later, when conditions change and the team finds that no one was in the path of the corrections that would have built the judgment they now need.
 
-That gap is what this course fills. It's a thinking course. It teaches you to read .NET code critically, recognize good and bad shapes, design abstractions that earn their weight, and reason about how the system will behave when it runs in production. Where it shows code, the code is concrete. The lesson is how to read code of that shape, not which snippet to memorize.
+This course is shaped around making the engineer who can be load-bearing at those points. The foundation arc builds the conceptual scaffolding for the kind of commitment the practice requires there. The topical modules are the depth that lets those commitments stand up under contact with production. The workshops are where you practice taking them on. Where the curriculum addresses code production, it does so for the engineer who will be held to what gets shipped.
+
+I looked at what's available. Microsoft Learn is an excellent reference — accurate, comprehensive, dry, shaped like an API surface. Encyclopedic books like *Pro ASP.NET Core* are 1,300-page feature tours: "here is what this method does." Online video courses are skill-acquisition-shaped: "build your first API," "master Entity Framework." Brilliant blogs — Andrew Lock, Mark Seemann, Milan Jovanović, Nick Chapsas — cover deep topics atomically, but no one has stitched them into a coherent curriculum aimed at the engineer who will be held to what they ship. That gap is what this course fills.
+
+It's a thinking course. It teaches you to read .NET code critically, recognize good and bad shapes, design abstractions that earn their weight, and reason about how the system will behave when it runs in production. Where it shows code, the code is concrete. The lesson is how to read code of that shape, not which snippet to memorize.
 
 ## What makes this course different
 
-- **It is about judgment, not skills.** Writing C# is increasingly an AI's job. Judging whether a design is right, whether a pull request is shippable, whether a system will survive its first incident — that stays with humans. This course is about that judgment.
+- **It is about judgment that binds.** Implementation, refactoring, routine debugging — much of this can run on computational feedback, and tools are absorbing more of it. The judgment the practice runs on at its load-bearing points is different: it requires someone who can take on a commitment, defend it, and bear the discrepancy when the system behaves differently. This course is shaped around making that engineer.
 - **Plain language, technical precision.** Every term is glossed on first use. Every claim is accurate enough to bet your production behavior on.
 - **A coherent curriculum, not a topic collection.** The modules build on each other. A single anchor anti-pattern — *lifetime mismatch* — threads through five separate modules and ties them together. Two integrative workshops bookend the course: one to build the mental model, one to test it.
 - **Anchored in real, anonymized anti-patterns.** Every module includes at least one concrete production failure mode — the kind that shows up in pull requests, not the kind invented for tutorials.
 - **No assumed background.** If you've written C# professionally, the foundation arc will move briskly. If you haven't, every term gets glossed and every concept gets grounded before it's used. You don't need to know any specific .NET library, framework, or product before you start.
 
-## Where judgment is load-bearing
-
-Most backend work runs on feedback the system itself can provide. A test fails, a monitor alerts, the system updates. Implementation, refactoring, routine debugging, scaffolding, large parts of testing — all of it. AI tooling does this work well, and folding it into your throughput is sensible.
-
-Other moments work differently. They are where someone takes on a commitment that binds the system's future. Architectural decisions where you have to say *this is what we are building, and this is what I will defend if it fails*. Customer-facing contracts where someone has to commit to behavior the customer can hold them to. Incident ownership, where someone answers for what failed and what comes next. Design reviews, where the design gets put on the table by a person who will be held to it. Postmortems, where someone has to make the link between a specific judgment and a specific failure and carry the learning forward.
-
-These are the load-bearing points. They are a small fraction of the visible throughput, and they carry most of the weight. Routing around them is fast. The cost arrives later, when conditions change and the team finds that no one was in the path of the corrections that would have built the judgment they now need.
-
-This course is shaped around those points. The foundation arc builds the conceptual scaffolding for that kind of commitment. The topical modules are the depth that lets those commitments stand up under contact with production. The workshops are where you practice taking them on. Where the curriculum addresses code production, it does so for the engineer who will be held to what gets shipped — not for the engineer competing with AI on output.
-
 ## Who this is for
 
-Engineers who want to design and judge backend systems written in C# and .NET. You may rarely write production code by hand. Your job is to spec the system, evaluate what gets generated, own the runtime behavior, and reason clearly when something goes wrong.
+Engineers who want to be load-bearing on backend systems written in C# and .NET. You'll write code, review code, design systems, and answer for what ships under your name. Your job is to take on commitments the system can be held to — and to make sure the work that ships supports them.
 
 **Prerequisites:** You can read code in some statically typed language. You've shipped something, somewhere, that talked to a database or another service. You don't need to know C# already; the course teaches what you need as it goes.
 
-**The bar this course aims for:** Someone who completes the full course should be qualified to lead a backend service end-to-end — design the API, choose the right abstractions, recognize the wrong ones, evaluate AI-generated pull requests, diagnose production incidents methodically, and reason about whether a proposed change will survive at scale. That is senior reasoning. Reps that make it instinctive come from running real services; the conceptual scaffolding comes from here.
+**The bar this course aims for:** Someone who completes the full course should be qualified to lead a backend service end-to-end — design the API, choose the right abstractions, recognize the wrong ones, evaluate any code that lands in their review (whoever or whatever produced it), diagnose production incidents methodically, and reason about whether a proposed change will survive at scale. That is senior reasoning. Reps that make it instinctive come from running real services; the conceptual scaffolding comes from here.
 
 ## What you'll get out of this
 
@@ -45,7 +39,7 @@ After working through this material, you should be able to:
 - **Read .NET code critically.** Not as syntax, but as a system. When you look at a class, you should know what it is for, what it promises, what it hides, and where it is lying about any of those.
 - **Recognize good and bad abstraction shapes.** When an abstraction earns its weight and when it is ceremony. When a boundary is in the right place and when it points the wrong way.
 - **Design APIs and services that survive production.** Not just "it works in the happy path" but "it works when the database is slow, when an upstream is flapping, when the client retries, when the load spikes."
-- **Evaluate AI-generated pull requests.** Tell the difference between code that looks right and code that *is* right. Recognize the failure modes AI most often produces — mocked dependencies that are wrong, swallowed exceptions, missing cancellation tokens, captive lifetimes, log messages that aren't queryable.
+- **Evaluate code you'll be answerable for.** Tell the difference between code that looks right and code that *is* right, regardless of who or what produced it. Recognize the failure modes that recur in production — mocked dependencies that are wrong, swallowed exceptions, missing cancellation tokens, captive lifetimes, log messages that aren't queryable — so the work that ships under your name can be defended when conditions change.
 - **Diagnose production issues methodically.** Not by guessing. By following a process: form a hypothesis, run the cheapest test that distinguishes hypotheses, narrow, repeat. Know what telemetry to ask for and what it tells you.
 - **Make architectural decisions you can defend.** When to introduce a service and when not to. When to make something asynchronous and when to keep it synchronous. When YAGNI is right and when it is an excuse. When a cache will help and when it will hide a different problem.
 
@@ -163,9 +157,9 @@ You've done the foundation arc. You want the operational and architectural muscl
 
 About **8 to 10 hours** after the foundations. This is the path for the engineer who will be on call, in incident review, and in architecture decision conversations.
 
-### "I want to get sharper at reviewing AI-generated code"
+### "I want to get sharper at reviewing code I'll answer for"
 
-You've done the foundation arc. You are looking for the reviewer's eye specifically — the modules where AI most often produces plausible-but-wrong code.
+You've done the foundation arc. You're looking to sharpen the reviewer's eye — particularly in the modules where AI-generated code (and, often, hurried human code) most reliably produces plausible-but-wrong shapes.
 
 1. [Module 9 — Entity Framework Core Without the Magic](09-entity-framework-core-without-the-magic.md)
 2. [Module 11 — Validation and Trust Boundaries](11-validation-and-trust-boundaries.md)
@@ -210,6 +204,6 @@ Three honest limits worth naming so your expectations are calibrated:
 2. **Calibration under ambiguity.** Knowing which 60% of a problem to ignore so you can ship the 40% that matters. This requires having shipped under deadline several times, with consequences, and lived with the results.
 3. **Communicating tradeoffs to non-engineers.** A different skill, adjacent to the course but not in it.
 
-A graduate of this course is **senior-ready**: capable of senior-level reasoning when given time to think, with the conceptual scaffolding to make real reps compound. The remaining gap closes through code review of real PRs, on-call rotations, postmortem participation, and architecture review involvement. The course makes that work pay off faster.
+A graduate of this course is **senior-ready**: capable of senior-level reasoning when given time to think, with the conceptual scaffolding to make real reps compound. Cultivated taste — the perception that names what's wrong about a system before the articulation arrives — comes from years of being corrected by systems you committed to descriptions of. The course can't manufacture those corrections. It can prepare you to recognize them when they happen, externalize your reasoning in a form the practice can hold you to, and make the next year of real work compound rather than blur.
 
-That is the honest contract. Don't expect to finish this and feel senior overnight. Expect to finish it and find that the next year of real work makes you visibly faster, sharper, and more useful.
+That is the honest contract. Don't expect to finish this and feel senior overnight. Expect to finish it and find that the next year of real work makes you visibly faster, sharper, and more useful — because you went into it with the conceptual scaffolding that lets the corrections take.

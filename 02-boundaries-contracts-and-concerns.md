@@ -176,7 +176,7 @@ The corollary cuts both ways. A name that fits cleanly does not guarantee a good
 
 ## A production failure that lives in the boundary
 
-Here is a real-shaped scenario, anonymized. A service in a mature codebase is built on a generic base class meant to remove repetition: every entity type gets a base repository that handles persistence. The base repository uses reflection to find primary keys, accepts string arguments for related-data inclusions, and returns the persistence framework's tracked entity graphs (the framework's representation of database rows as connected objects, with modification tracking) to its callers. Domain services receive these tracked entities and pass them to mappers; the mappers build response objects; the response objects are returned to the API.
+What follows is a failure pattern in long-lived codebases, anonymized. A service in a mature codebase is built on a generic base class meant to remove repetition: every entity type gets a base repository that handles persistence. The base repository uses reflection to find primary keys, accepts string arguments for related-data inclusions, and returns the persistence framework's tracked entity graphs (the framework's representation of database rows as connected objects, with modification tracking) to its callers. Domain services receive these tracked entities and pass them to mappers; the mappers build response objects; the response objects are returned to the API.
 
 The team treats this as a layered architecture. There is a repository layer, a service layer, a controller layer. Code is in the right files. Files are in the right folders. By every organizational measure, the architecture is in place.
 
