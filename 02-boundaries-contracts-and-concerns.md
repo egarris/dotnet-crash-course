@@ -240,7 +240,7 @@ The first place this module's ideas get exercised under pressure is the design r
 
 The answers that don't hold up are the ones that come from organizational habit. "Because we always have a service layer." "Because the framework expects it." "Because the architecture diagram has one." These are not wrong on their face; they may even be locally correct. But they don't tell the room what work the boundary is doing, which means they don't tell the room when the boundary should change. A team that can defend its boundaries on the merits can move them when conditions change. A team that has only inherited reasons cannot.
 
-The same skill is what makes AI-generated pull requests reviewable. AI tooling produces code that follows familiar shapes — the right number of layers, the right naming patterns, the right pieces in the right files. Whether the boundaries inside that code are doing useful work is a separate question, and it is the reviewer's question. A reviewer who can ask the four questions of any class that lands in a diff is doing work that the producer of the diff could not do.
+The same skill is what makes any pull request reviewable — your own, your team's, AI-generated or otherwise. Code that ships under review tends to follow familiar shapes — the right number of layers, the right naming patterns, the right pieces in the right files. Whether the boundaries inside that code are doing useful work is a separate question, and it is the reviewer's question. A reviewer who can ask the four questions of any class that lands in a diff is doing work that the producer of the diff couldn't do — and that the reviewer will be answerable for if the diff ships.
 
 ## Closing
 

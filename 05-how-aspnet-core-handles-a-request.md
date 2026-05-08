@@ -335,7 +335,7 @@ Does any middleware capture scoped state in singleton fields? Middleware classes
 
 Does manual code read `HttpContext.Request.Body`? If so, what model binding behavior is it bypassing — content negotiation, validation, error responses, consistent serialization?
 
-These are the things a fluent reviewer can ask in a few minutes when a PR touches the pipeline. AI tooling produces `Program.cs` content that follows familiar shapes and usually orders middleware correctly. Where it deviates — ordering off by one, options without `ValidateOnStart`, manual body reads — the reviewer is the only line of defense before the deviation becomes the next production failure.
+These are the things a fluent reviewer can ask in a few minutes when a PR touches the pipeline. Code that ships under review — including the increasing volume produced by AI tooling — usually orders middleware correctly. Where it deviates — ordering off by one, options without `ValidateOnStart`, manual body reads — the reviewer is the only line of defense before the deviation becomes the next production failure.
 
 ## Closing
 

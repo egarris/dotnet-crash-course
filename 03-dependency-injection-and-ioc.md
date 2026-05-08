@@ -362,7 +362,7 @@ The first place DI fluency is exercised under pressure is the code review of a n
 
 The questions are routine in shape. They are also load-bearing. The difference between a service that quietly captures a scoped `DbContext` and one that doesn't is whether the reviewer asked. The difference between a registration that defines a coherent runtime topology and one that signals trouble six months later is whether someone slowed down at the moment of registration to walk the dependency graph.
 
-The same questions apply to AI-generated code. AI tools tend to mirror the lifetime patterns of nearby registrations. When the surrounding code has a captive dependency masked by `IServiceScopeFactory`, the AI's contributions extend the pattern. A reviewer with mechanism-level fluency in DI can see this — the registration looks plausible, but the lifetimes don't add up — and is doing work the producer of the diff couldn't do.
+The same questions apply to any code that lands in the diff — AI-generated or otherwise. Code tends to mirror the patterns of its neighborhood; when the surrounding code has a captive dependency masked by `IServiceScopeFactory`, new contributions extend the pattern. A reviewer with mechanism-level fluency in DI can see this — the registration looks plausible, but the lifetimes don't add up — and is doing work the producer of the diff couldn't do.
 
 The composition root is the natural place to do this work. A composition root that reads cleanly is one where every registration is defensible by the four questions of Module 2. A composition root that doesn't read cleanly is the system telling you, in advance, where the bugs will live.
 

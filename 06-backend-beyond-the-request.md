@@ -281,7 +281,7 @@ What does graceful shutdown mean for in-flight work? Will it commit, roll back, 
 
 If the work is scheduled, what coordinates across replicas? If the answer is "nothing," is that intentional or an oversight?
 
-These questions are answerable for someone who understands the host's lifecycle and the unit-of-work discipline. AI tooling produces `BackgroundService` skeletons that often look correct at the surface and fail one or more of these checks at the mechanism level — particularly the lifetime and shutdown ones.
+These questions are answerable for someone who understands the host's lifecycle and the unit-of-work discipline. `BackgroundService` skeletons that ship under review — whether AI-produced or hurried human work — often look correct at the surface and fail one or more of these checks at the mechanism level, particularly the lifetime and shutdown ones.
 
 ## Closing
 
